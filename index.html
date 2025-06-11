@@ -709,7 +709,7 @@
         <div class="cta-section">
             <div class="cta-content">
                 <h2>🚀 Porta la Developer Experience nella tua azienda</h2>
-                <p>Sei interessato a migliorare la produttività e soddisfazione del tuo team di sviluppo?</p>
+                <p>Sei interessato a migliorare la produttività e la soddisfazione del tuo team di sviluppo?</p>
                 <a href="https://calendar.yafb.net/" target="_blank" class="cta-btn">
                     📅 Prenota un appuntamento gratuito
                 </a>
@@ -852,15 +852,96 @@
     }
 
     // Funzione per parsare CSV
+    function parseCsvLines(strData, strDelimiter) {
+        // Check to see if the delimiter is defined. If not,
+        // then default to comma.
+        strDelimiter = (strDelimiter || ",");
+
+        // Create a regular expression to parse the CSV values.
+        var objPattern = new RegExp(
+            (
+                // Delimiters.
+                "(\\" + strDelimiter + "|\\r?\\n|\\r|^)" +
+
+                // Quoted fields.
+                "(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|" +
+
+                // Standard fields.
+                "([^\"\\" + strDelimiter + "\\r\\n]*))"
+            ),
+            "gi"
+        );
+
+
+        // Create an array to hold our data. Give the array
+        // a default empty first row.
+        var arrData = [[]];
+
+        // Create an array to hold our individual pattern
+        // matching groups.
+        var arrMatches = null;
+
+
+        // Keep looping over the regular expression matches
+        // until we can no longer find a match.
+        while (arrMatches = objPattern.exec( strData )){
+
+            // Get the delimiter that was found.
+            var strMatchedDelimiter = arrMatches[ 1 ];
+
+            // Check to see if the given delimiter has a length
+            // (is not the start of string) and if it matches
+            // field delimiter. If id does not, then we know
+            // that this delimiter is a row delimiter.
+            if (
+                strMatchedDelimiter.length &&
+                (strMatchedDelimiter != strDelimiter)
+            ){
+
+                // Since we have reached a new row of data,
+                // add an empty row to our data array.
+                arrData.push( [] );
+
+            }
+
+
+            // Now that we have our delimiter out of the way,
+            // let's check to see which kind of value we
+            // captured (quoted or unquoted).
+            if (arrMatches[ 2 ]){
+
+                // We found a quoted value. When we capture
+                // this value, unescape any double quotes.
+                var strMatchedValue = arrMatches[ 2 ].replace(
+                    new RegExp( "\"\"", "g" ),
+                    "\""
+                );
+
+            } else {
+
+                // We found a non-quoted value.
+                var strMatchedValue = arrMatches[ 3 ];
+
+            }
+
+
+            // Now that we have our value string, let's add
+            // it to the data array.
+            arrData[ arrData.length - 1 ].push( strMatchedValue );
+        }
+
+        // Return the parsed data.
+        return( arrData );
+    }
+
+
     function parseCSV(csvText) {
-        const lines = csvText.trim().split('\n');
-        if (lines.length < 2) return [];
+        const lines = parseCsvLines(csvText.trim(), ',');
 
-        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        const headers = lines[0];
 
-        return lines.slice(1).map((line, index) => {
+        return lines.slice(1).map((values, index) => {
             try {
-                const values = line.split(',').map(v => v.trim().replace(/"/g, ''));
                 const obj = { _rowIndex: index };
 
                 headers.forEach((header, idx) => {
@@ -999,6 +1080,7 @@
 
     // Analisi dati
     function analyzeData(data) {
+        console.log("Analizzando dati:", data);
         const totalResponses = data.length;
 
         if (totalResponses === 0) {
@@ -1037,6 +1119,8 @@
             col.toLowerCase().includes('strumenti')
         );
 
+        console.log("SAT", satisfactionColumn)
+
         const devexColumn = columns.find(col =>
             col.toLowerCase().includes('devex') ||
             col.toLowerCase().includes('developer experience') ||
@@ -1065,7 +1149,9 @@
 
         data.forEach(item => {
             // Soddisfazione
+            console.log("ITEM:", item)
             if (satisfactionColumn && item[satisfactionColumn]) {
+
                 const satisfaction = parseInt(item[satisfactionColumn]);
                 if (!isNaN(satisfaction)) {
                     totalSatisfaction += satisfaction;
